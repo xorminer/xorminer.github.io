@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>xorminer — a miner for the fork</title>
-<meta name="description" content="Open-source getblocktemplate miner for the BIP-110 proof-of-work-change fork of Bitcoin. Pluggable hash kernels. Your node, your templates.">
+<title>xorminer — reference mining code for the fork</title>
+<meta name="description" content="Open-source reference mining code for the BIP-110 proof-of-work-change fork of Bitcoin, including a byte-exact Python implementation of the live PoW pipeline validated against the official test vectors.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='none' stroke='%23D97A1F' stroke-width='3'/%3E%3Cpath d='M16 6v20M6 16h20' stroke='%23D97A1F' stroke-width='3'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -111,12 +111,15 @@ footer a{text-decoration-thickness:1px}
 <header>
   <div class="mark"><span class="xor" aria-hidden="true">⊕</span><span class="wordmark">xorminer</span></div>
   <h1>Grinds bytes <span class="hex">76–80</span>.</h1>
-  <p class="lede">An open-source <span class="mono">getblocktemplate</span> miner for the
-  BIP-110 proof-of-work-change fork of Bitcoin. <strong>Pluggable hash kernels.
-  Your node, your templates.</strong> Runs on the Python you already have.</p>
+  <p class="lede">An open-source <span class="mono">getblocktemplate</span> miner
+  built in the run-up to the BIP-110 proof-of-work-change fork of Bitcoin.
+  <strong>Pluggable hash kernels. Your node, your templates.</strong> Runs on
+  the Python you already have. Maintained as <strong>reference code</strong>,
+  not a production miner.</p>
   <div class="status" role="note">
-    <b>STATUS</b><span>experimental · unaudited hobby code · fork parameters not final ·
-    use entirely at your own risk</span>
+    <b>STATUS</b><span>reference code · the fork activated 2026-08-29 at block
+    961640 · the mining kernels implement the pre-release draft design and do
+    not mine the live chain · unaudited — use entirely at your own risk</span>
   </div>
 </header>
 
@@ -140,20 +143,42 @@ footer a{text-decoration-thickness:1px}
   </div>
   <p class="mapnote">Everything to the left of the nonce, your own node decides.
   <b>xorminer builds the whole header locally and grinds the last four bytes</b> —
-  through whichever hash algorithm the fork schedule says is in force.</p>
+  through whichever hash algorithm the fork schedule says is in force. (The fork
+  as actually shipped replaced this classic 80-byte header with a 164-byte
+  redesign — see below.)</p>
 </div>
+
+<section>
+  <div class="dl">
+    <div class="eyebrow">what this is, now that the fork is live</div>
+    <p>The proof-of-work change activated on <b>2026-08-29 at block 961640</b>
+    with a redesigned 164-byte header and a staged BLAKE2b-256 pipeline — and
+    day-one hashrate arrived at ASIC scale, from resurrected Sia-era hardware.
+    A hobbyist CPU/GPU miner has no chain to win on, so xorminer is not being
+    developed into a production miner.</p>
+    <p style="margin-top:8px">What it is instead: <b>working reference code.</b>
+    The <span class="mono">getblocktemplate</span> plumbing — template building,
+    coinbase and witness-commitment construction, submission, stale-tip
+    handling — is tested end-to-end on fork-simulation networks, and
+    <span class="mono">draftpow.py</span> is a byte-exact, stdlib-only Python
+    implementation of the live chain's final PoW pipeline,
+    <b>validated against the official test vectors</b> that ship in the Bitcoin
+    Knots source tree. If you're building a real miner, that file is the spec
+    you can run.</p>
+  </div>
+</section>
 
 <section>
   <div class="eyebrow">quickstart</div>
 <pre><code><span class="c"># sanity check — every algorithm, no node needed</span>
 python3 -m xorminer --selftest
 
-<span class="c"># solo mine against your fork node</span>
-python3 -m xorminer --chain main --datadir <span class="p">&lt;datadir&gt;</span> --payout <span class="p">&lt;address&gt;</span> \
-    --powchange <span class="p">&lt;TIME:ALGO:SHIFT&gt;</span>
+<span class="c"># verify the LIVE chain's PoW pipeline against the official vectors</span>
+python3 xorminer/draftpow.py <span class="p">&lt;path-to&gt;</span>/block_header_v2.json
 
-<span class="c"># or mine to a xorpool</span>
-python3 -m xorminer ... --pool <span class="p">&lt;host&gt;</span>:3333</code></pre>
+<span class="c"># mine on a fork-simulation network (draft construction — not the live chain)</span>
+python3 -m xorminer --chain regtest --datadir <span class="p">&lt;datadir&gt;</span> --payout <span class="p">&lt;address&gt;</span> \
+    --powchange <span class="p">&lt;TIME:ALGO:SHIFT&gt;</span></code></pre>
 </section>
 
 <section>
@@ -171,9 +196,11 @@ python3 -m xorminer ... --pool <span class="p">&lt;host&gt;</span>:3333</code></
   </div>
   <div class="specrow">
     <h3>fork-schedule aware</h3>
-    <p>Mirrors the node's <span class="mono">-powchangetime</span> schedule exactly.
-    After the fork time, <b>the proof-of-work hash is the block hash</b>, selected
-    by header nTime — the miner switches algorithms at the same byte the chain does.</p>
+    <p>Mirrors the node's <span class="mono">-powchangetime</span> schedule
+    exactly on simulation networks, switching algorithms at the same moment the
+    chain does. The live chain's final construction — the staged BLAKE2b
+    pipeline behind header v2 — is implemented byte-exactly in
+    <span class="mono">draftpow.py</span>.</p>
   </div>
   <div class="specrow">
     <h3>pool mode</h3>
